@@ -1,0 +1,14 @@
+We have 3 different dataset:
+Nucleus Fingerprint region of the Raman spectra (600-1800 cm-1)
+Nucleus High-wavelength region of the Raman spectra (2800-3100 cm-1)
+Cytoplasm Fingerprint region of the Raman spectra (600-1800 cm-1)
+Each one should be analyzed independently.
+This dataset is that obtained from the pre-processing procedure, so they have been already processed by background
+subtraction, baseline correction, outlier test (this is why some measurements are missing: they were outliers), normalization.
+Each dataset is organized as a matrix. In the first row we have the Raman shift (X axis of our spectrum plot).
+In the first column, the measurement label (number of cell.number of measurement: For example measurement 1.1 is the
+first measurement of the cell 1). The second column corresponds to the cell type:
+	- HepG2, an immortalized cell line used as a tumor cell model for liver cancer
+	- NorNon: Normal non cultured cells from a patient with liver cancer but in an area away from the tumor mass (healthy)
+	- MalN/MalNoN: Malignant non cultured cells from a patient with liver cancer
+	- Mal/MalCult: Malignant cultured cells from a patient with liver cancer and cultured to support viability
