@@ -11,6 +11,7 @@ import sklearn
 from sklearn import metrics
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
+from  sklearn.linear_model import  LogisticRegression
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 from generate_window import generate
 
@@ -22,13 +23,13 @@ def main():
 
     pickle_dir = "./generated_pickle_files_cytoplasm"
     pickle_files = [pickle_dir]
-    size = str(10)
-    overlap =str(0.75)
+    size = 2
+    overlap = 0.75
     prima = True
     #legge i dati per tutte chiavi dello specifico pickle
     files = []
     for dataset in pickle_files:
-        dataset_files = glob.glob(dataset + '/dataset_raman_segmented-window-size-'+size+'_'+'overlap-'+overlap+'.pickle')
+        dataset_files = glob.glob(dataset + '/dataset_raman_segmented-window-size-'+str(size)+'_'+'overlap-'+str(overlap)+'.pickle')
         for x in dataset_files:
             files.append(x)
     # sorted genera una lista ordinata di item partendo dall'oggetto
@@ -42,35 +43,72 @@ def main():
                 prima = False
                 x_tot =pi_dict[k]['X']
                 y_tot = pi_dict[k]['y']
-                #x_test = pi_dict[k]['X_test']
-                #y_test = pi_dict[k]['y_test']
+                ### frequenze aggiunte ad ogni record ([:, 0] permette di prendere solo la prima colonna)
+                f_totA = pi_dict[k]['freq'][:, 0]
+                f_totB = pi_dict[k]['freq'][:, size-1]
+                #x_tot = np.append(f_tot, x_tot, axis=0)
+                x_tot =np.insert(x_tot, 0, f_totA, axis=1) #viene inserita la frequenza come prima colonna delle x_tot
+                x_tot = np.insert(x_tot, 1, f_totB,
+                                  axis=1)  # viene inserita la frequenza come prima colonna delle x_tot
+
             else :
                 xx_tot = pi_dict[k]['X']
+                #vengono inserite le frequenze di base all'interno di x_tot
+                f_totA = pi_dict[k]['freq'][:, 0]
+                f_totB = pi_dict[k]['freq'][:, size - 1]
+                #xx_tot = np.append(xx_tot, f_tot, axis=0)
+                xx_tot = np.insert(xx_tot, 0, f_totA, axis=1)
+                xx_tot = np.insert(xx_tot, 1, f_totB, axis=1)
                 x_tot = np.vstack([x_tot, xx_tot])
                 yy_tot = pi_dict[k]['y']
                 y_tot = np.concatenate([y_tot, yy_tot], axis =None)
-                #xx_test = pi_dict[k]['X_test']
-                #x_test = np.vstack([x_test, xx_test])
-                #yy_test = pi_dict[k]['y_test']
-                #y_test = np.concatenate([y_test, yy_test], axis = None)
+
+
 
         infile.close()
         x_train, x_test, y_train, y_test = train_test_split(x_tot, y_tot,
                                                             test_size=0.3, shuffle=True, random_state= 36)
 
 
+    # Spot Check Algorithms
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.svm import SVC
+    from sklearn.model_selection import StratifiedKFold
+    from sklearn.model_selection import cross_val_score
+    models = []
+    models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
+    models.append(('LDA', LinearDiscriminantAnalysis()))
+    models.append(('KNN', KNeighborsClassifier()))#prima non funzionava
+    models.append(('CART', DecisionTreeClassifier()))
+    models.append(('NB', GaussianNB()))
+    models.append(('SVM', SVC(gamma='auto'))) #prima non funzionava
+    # evaluate each model in turn
+    results = []
+    names = []
+    for name, model in models:
+        kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+        cv_results = cross_val_score(model, x_train, y_train, cv=kfold, scoring='accuracy')
+        results.append(cv_results)
+        names.append(name)
+        print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+    #fine prova
     # Create Decision Tree classifer object
     #DecisionTreeClassifier =sklearn.tree
-    clf = DecisionTreeClassifier(criterion="entropy", max_depth=100)
+    clf = DecisionTreeClassifier(criterion="entropy", max_depth=1000)
 
     # Train Decision Tree Classifer
     clf = clf.fit(x_train, y_train)
 
     # Predict the response for test dataset
     y_pred = clf.predict(x_test)
-
+    score = clf.score(x_test, y_pred)
     # Metriche per J48
-    print("Accuracy per J48:", metrics.accuracy_score(y_test, y_pred))
+
+    print("Accuracy per J$48:", metrics.accuracy_score(y_test, y_pred))
+
+
     ###Metriche###
     # Training predictions (to demonstrate overfitting)
     train_rf_predictions = clf.predict(x_train)
@@ -145,6 +183,7 @@ def main():
         Normalization can be applied by setting `normalize=True`.
         Source: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
         """
+
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
             print("Normalized confusion matrix")
@@ -178,14 +217,14 @@ def main():
 
     # Confusion matrix
     cm = confusion_matrix(y_test, y_pred)
-    plot_confusion_matrix(cm, classes=['Poor Health', 'Good Health'],
+    plot_confusion_matrix(cm, classes=['Tumorale (1)', 'Non Tumorale(0)'],
                           title='Health Confusion Matrix')
     plt.savefig('cm.png')
 
     #modello random forest feature  = x labels =y
     # Import the model we are using
     from sklearn.ensemble import RandomForestClassifier  # Instantiate model with 1000 decision trees
-    rf = RandomForestClassifier( random_state=42)  # Train the model on training data
+    rf = RandomForestClassifier(max_depth=3 ,n_estimators= 100)  # Train the model on training data
     rf.fit(x_train, y_train)
     # Use the forest's predict method on the test data
     predictions = rf.predict(x_test)  # Calculate the absolute errors

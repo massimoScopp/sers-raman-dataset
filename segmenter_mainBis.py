@@ -15,7 +15,7 @@ import pandas as pd
 # un unico main che si occupa della segmentazione dei dataset in finestre .pickle
 # -global parameters---------------------------------------------
 #strnome specifica il nome del dataset e del .pickle
-strnome ='cytoplasm'
+strnome ='nucleusHW'
 path_dataset = './dataset_raman_csv_'+strnome
 pickle_dir = "./generated_pickle_files_"+strnome
 
@@ -159,18 +159,25 @@ def main():
 
     segmented_dataset = dict()
     for (label_data, segmenter) in segmenters:
-        spectrum = dataset_raman.get(k).get('data')
+        #spectrum = dataset_raman.get(k).get('data')
         for k in dataset_raman.keys():
+            spectrum = dataset_raman.get(k).get('data')#originariamente stava fuori
             spectrum = spectrum.reshape(1, -1)
             labels = numpy.array(len(spectrum) * [dataset_raman.get(k).get('tumoral')])
             labels = labels.reshape(1, -1)
+            #prova inserimento frequenze
+            freq = numpy.array(len(spectrum) * [dataset_raman.get(k).get('freq')])
+            #freq = freq.reshape(1, -1)
+            segmenter.fit(freq, spectrum)
+            segments_and_freq =segmenter.transform(freq, spectrum)
+            #fine
             segmenter.fit(spectrum, labels)
             segments_and_lables = segmenter.transform(spectrum, labels)
-            print("Windows layout shape:{0},{1}".format(segments_and_lables[0].shape, segments_and_lables[1].shape))
+            print("Windows layout shape:{0},{1},{2}".format(segments_and_lables[0].shape, segments_and_lables[1].shape,segments_and_freq[1].shape))
             #X_train, X_test, y_train, y_test = train_test_split(segments_and_lables[0], segments_and_lables[1], test_size=testset_ratio, shuffle=True)
 
             segmented_dataset.update(
-                {k: {'X': segments_and_lables[0], 'y': segments_and_lables[1],
+                {k: {'X': segments_and_lables[0], 'y': segments_and_lables[1], 'freq': segments_and_freq[0],
                      'segmenter_params': label_data,
                      'original_data': dataset_raman,
                      'segments_data': segments_and_lables[0], 'segments_labels': segments_and_lables[1]
