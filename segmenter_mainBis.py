@@ -15,8 +15,9 @@ import pandas as pd
 # un unico main che si occupa della segmentazione dei dataset in finestre .pickle
 # -global parameters---------------------------------------------
 #strnome specifica il nome del dataset e del .pickle
-strnome ='nucleusHW'
+strnome ='nucleusB'
 path_dataset = './dataset_raman_csv_'+strnome
+#path_dataset = './dataset_raman_interval_freqMax_'+strnome
 pickle_dir = "./generated_pickle_files_"+strnome
 
 dump_segmented_pickles = True

@@ -96,7 +96,7 @@ def main():
     #fine prova
     # Create Decision Tree classifer object
     #DecisionTreeClassifier =sklearn.tree
-    clf = DecisionTreeClassifier(criterion="entropy", max_depth=1000)
+    clf = DecisionTreeClassifier(criterion="entropy", max_depth=3)
 
     # Train Decision Tree Classifer
     clf = clf.fit(x_train, y_train)
