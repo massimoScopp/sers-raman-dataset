@@ -15,7 +15,7 @@ import pandas as pd
 # un unico main che si occupa della segmentazione dei dataset in finestre .pickle
 # -global parameters---------------------------------------------
 #strnome specifica il nome del dataset e del .pickle
-strnome ='nucleusB'
+strnome ='nucleusV'
 path_dataset = './dataset_raman_csv_'+strnome
 #path_dataset = './dataset_raman_interval_freqMax_'+strnome
 pickle_dir = "./generated_pickle_files_"+strnome
@@ -102,7 +102,7 @@ def create_unsegmented_dataset():
                         nr += 1
                     kind = dataLine[1]
                     cell = cell + '.' + str(nr)
-                    print("cellula: ", cell)
+                    #print("cellula: ", cell)
                     samples = numpy.array([float(x) for x in dataLine[2:]])
                     print("spectrum:", trip, cell, kind, " shape=", samples.shape)
                     dataset_raman.update({
@@ -111,7 +111,7 @@ def create_unsegmented_dataset():
                             'data': samples,
                             'freq': raman_shift
                         }})
-
+            print(" id cellula: ", cell)
             # inserire codice per categorizzazione, in questo caso categorizza su tumorale mettendo 1 =tumorale 0 altrimenti
             # in item viene creata una copia del dict dataset_raman per items
             item = dataset_raman.items()

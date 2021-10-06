@@ -77,12 +77,14 @@ def create_unsegmented_dataset():
             print("Processing x axis..")
             reader = csv.reader(open(trip, 'r'))
             raman_shift = None
+            #lettura raman shift o meglio dell'header dei file
             for line in reader:
                 if len(line) > 0 and line[0].startswith('\t--\t'):
                     headerLine = line[0].split("\t")
                     raman_shift = numpy.array([float(x) for x in headerLine[2:]])
 
         dataset_raman = dict()
+        #nr è un numero progressivo della cellula
         nr = -1
         for trip in files:
             print(50 * "_")
@@ -111,7 +113,7 @@ def create_unsegmented_dataset():
                             'freq': raman_shift
                         }})
 
-            # inserire codice per categorizzazione, in questo caso categorizza su tumorale mettendo 1 =tumorale 0 altrimenti
+            #  codice per categorizzazione, in questo caso categorizza su tumorale, mettendo 1 = tumorale 0 altrimenti
             # in item viene creata una copia del dict dataset_raman per items
             item = dataset_raman.items()
             # in item2 viene creata una copia di dataset_raman prendendo i suoi valori, utile a costruire l'attributo categorico tumoral
@@ -125,12 +127,12 @@ def create_unsegmented_dataset():
             df.set_index(['index'], inplace=True)
             # viene cambiato il nome della colonna Tum_Cyto per poterla gestire in maniera indipendente
             df.columns.values[0] = 'tumoral'
-            # da migliorare
-            # for d in dataset_raman.keys():
-            # print("valori d: ",d)
+
+
             for d, row in df.iterrows():
                 # print("riga df", row['tumoral'], d)
-                # aggiornamento dataset raman, scorre gli elementi key values quando la chiave è uguale all'indice del dataframe creato sostituisce il valore della colonna tumoral
+                # aggiornamento dataset raman, scorre gli elementi key values quando la chiave è uguale
+                # all'indice del dataframe creato sostituisce il valore della colonna tumoral
                 for key, value in item:
                     if key == d:
                         dataset_raman[key]['tumoral'] = row['tumoral']

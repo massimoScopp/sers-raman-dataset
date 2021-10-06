@@ -20,12 +20,19 @@ import pandas as pd
 
 def main():
     pi_dict = dict()
-    tipoCell ='nucleusB'
+    tipoCell ='interval_freqMax_nucleus'
     pickle_dir = "./generated_pickle_files_"+tipoCell
     pickle_files = [pickle_dir]
     size = [2, 10, 20, 30]
     overlap = [0.5, 0.75, 0, 1]
+    #inserimento nuova cartella per matrici di confusione
+    cm_dir = "./confusion_matrix_" + tipoCell
+    if not os.path.exists(cm_dir):
 
+        Path(cm_dir).mkdir(parents=False, exist_ok=True)
+    else: pass
+
+    #fine inserimento
     #legge i dati per tutte chiavi dello specifico pickle
     import csv
     with open('misurazioni_'+tipoCell+'.csv', mode='w', newline='') as csv_file:
@@ -106,7 +113,7 @@ def main():
             #fine prova
             # Create Decision Tree classifer object
             #DecisionTreeClassifier =sklearn.tree
-            clf = DecisionTreeClassifier(criterion="entropy", max_depth=5000)
+            clf = DecisionTreeClassifier(criterion="entropy", max_depth=1000)
 
             # Train Decision Tree Classifer
             clf = clf.fit(x_train, y_train)
@@ -115,8 +122,15 @@ def main():
             y_pred = clf.predict(x_test)
             score = clf.score(x_test, y_pred)
             # Metriche per J48
-            j48score = metrics.accuracy_score(y_test, y_pred)
-            print("Accuracy per J$48:", j48score )
+            j48scoreAcc = metrics.accuracy_score(y_test, y_pred)
+            print("Accuracy per J48:", j48scoreAcc )
+            j48scorePrec = metrics.precision_score(y_test, y_pred)
+            print("Precision per J48:", j48scorePrec)
+            j48scoreF1 = metrics.f1_score(y_test, y_pred)
+            print("F1 score per J48:", j48scoreF1)
+            j48scoreRec = metrics.recall_score(y_test, y_pred)
+            print("Recall per J48:", j48scoreRec)
+            #fine metriche J48
 
 
 
@@ -228,27 +242,37 @@ def main():
 
             # Confusion matrix
             cm = confusion_matrix(y_test, y_pred)
-            plot_confusion_matrix(cm, classes=['Tumorale (1)', 'Non Tumorale(0)'],
+            plot_confusion_matrix(cm, classes=['True', 'False'],
                                   title='Health Confusion Matrix')
-            plt.savefig('cm.png')
+            pp =cm_dir+'/cm_'+tipoCell+'_'+str(s)+'_'+str(ov)+'.png'
+            print("path per salvare immagini cm ", pp)
+            plt.savefig(pp)
 
             #modello random forest feature  = x labels =y
             # Import the model we are using
             from sklearn.ensemble import RandomForestClassifier  # Instantiate model with 1000 decision trees
-            rf = RandomForestClassifier(max_depth=1000 ,n_estimators= 1000)  # Train the model on training data
+            rf = RandomForestClassifier(max_depth=100 ,n_estimators= 100)  # Train the model on training data
             rf.fit(x_train, y_train)
             # Use the forest's predict method on the test data
             predictions = rf.predict(x_test)  # Calculate the absolute errors
             # Calculate and display accuracy
             # Calculate mean absolute percentage error (MAPE)
             # Calculate the absolute errors
-            rforestscore = metrics.accuracy_score(y_test, predictions)
-            print("Accuracy per RandomForest:", rforestscore)
+            #metrics Rf
+            rfscoreAcc = metrics.accuracy_score(y_test, predictions)
+            print("Accuracy per J48:", rfscoreAcc)
+            rfscorePrec = metrics.precision_score(y_test, predictions)
+            print("Precision per J48:", rfscorePrec)
+            rfscoreF1 = metrics.f1_score(y_test, predictions)
+            print("F1 score per J48:", rfscoreF1)
+            rfscoreRec = metrics.recall_score(y_test, predictions)
+            print("Recall per J48:", rfscoreRec)
+            # fine metriche J48
             with open('misurazioni_' + tipoCell + '.csv', 'a', newline='') as csv_file:
                 writer = csv.writer(csv_file, delimiter=';')
                 nome = tipoCell + '_size_' + str(s) + '_overlap_' + str(ov)
-                writer.writerow([nome, 'J48', j48score])
-                writer.writerow([nome, 'RandomForest', rforestscore])
+                writer.writerow([nome, 'J48', j48scoreAcc])
+                writer.writerow([nome, 'RandomForest', rfscoreAcc])
 
 if __name__ == '__main__':
     main()

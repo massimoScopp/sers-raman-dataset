@@ -20,11 +20,20 @@ import pandas as pd
 
 def main():
     pi_dict = dict()
-    tipoCell ='nucleus'
+    tipoCell ='nucleusE'
     pickle_dir = "./generated_pickle_files_"+tipoCell
     pickle_files = [pickle_dir]
     size = [2, 10, 20, 30]
     overlap = [0.5, 0.75, 0, 1]
+    # inserimento nuova cartella per matrici di confusione
+    cm_dir = "./confusion_matrix_FBase_" + tipoCell
+    if not os.path.exists(cm_dir):
+
+        Path(cm_dir).mkdir(parents=False, exist_ok=True)
+    else:
+        pass
+
+    # fine inserimento
 
     #legge i dati per tutte chiavi dello specifico pickle
     import csv
@@ -32,7 +41,7 @@ def main():
         #colonne = ['Nome', 'tipo ML', 'accuracy']
         writer = csv.writer(csv_file, quoting=csv.QUOTE_ALL,delimiter=';')
 
-        writer.writerow(['Nome', 'tipo ML', 'accuracy'])
+        writer.writerow(['Nome', 'tipo ML', 'accuracy', 'precision', 'F1 score', 'recall', 'roc_auc'])
 
     for s in size:
         for ov in overlap:
@@ -79,176 +88,185 @@ def main():
                 x_train, x_test, y_train, y_test = train_test_split(x_tot, y_tot,
                                                                     test_size=0.3, shuffle=True, random_state= 36)
 
+                # Spot Check Algorithms
+                from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+                from sklearn.neighbors import KNeighborsClassifier
+                from sklearn.naive_bayes import GaussianNB
+                from sklearn.svm import SVC
+                from sklearn.model_selection import StratifiedKFold
+                from sklearn.model_selection import cross_val_score
+                models = []
+                models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
+                models.append(('LDA', LinearDiscriminantAnalysis()))
+                # models.append(('KNN', KNeighborsClassifier()))#prima non funzionava
+                models.append(('CART', DecisionTreeClassifier()))
+                models.append(('NB', GaussianNB()))
+                # models.append(('SVM', SVC(gamma='auto'))) #prima non funzionava
+                # evaluate each model in turn
+                results = []
+                names = []
+                for name, model in models:
+                    kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
+                    cv_results = cross_val_score(model, x_train, y_train, cv=kfold, scoring='accuracy')
+                    results.append(cv_results)
+                    names.append(name)
+                    print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                # fine prova
+                # Create Decision Tree classifer object
+                # DecisionTreeClassifier =sklearn.tree
+                clf = DecisionTreeClassifier(criterion="entropy", max_depth=5000)
 
-            # Spot Check Algorithms
-            from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-            from sklearn.neighbors import KNeighborsClassifier
-            from sklearn.naive_bayes import GaussianNB
-            from sklearn.svm import SVC
-            from sklearn.model_selection import StratifiedKFold
-            from sklearn.model_selection import cross_val_score
-            models = []
-            models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
-            models.append(('LDA', LinearDiscriminantAnalysis()))
-            #models.append(('KNN', KNeighborsClassifier()))#prima non funzionava
-            models.append(('CART', DecisionTreeClassifier()))
-            models.append(('NB', GaussianNB()))
-            #models.append(('SVM', SVC(gamma='auto'))) #prima non funzionava
-            # evaluate each model in turn
-            results = []
-            names = []
-            for name, model in models:
-                kfold = StratifiedKFold(n_splits=10, random_state=1, shuffle=True)
-                cv_results = cross_val_score(model, x_train, y_train, cv=kfold, scoring='accuracy')
-                results.append(cv_results)
-                names.append(name)
-                print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
-            #fine prova
-            # Create Decision Tree classifer object
-            #DecisionTreeClassifier =sklearn.tree
-            clf = DecisionTreeClassifier(criterion="entropy", max_depth=5000) #variazioni parametri
+                # Train Decision Tree Classifer
+                clf = clf.fit(x_train, y_train)
 
-            # Train Decision Tree Classifer
-            clf = clf.fit(x_train, y_train)
+                # Predict the response for test dataset
+                y_pred = clf.predict(x_test)
+                score = clf.score(x_test, y_pred)
+                # Metriche per J48
+                j48scoreAcc = metrics.accuracy_score(y_test, y_pred)
+                print("Accuracy per J48:", j48scoreAcc)
+                j48scorePrec = metrics.precision_score(y_test, y_pred)
+                print("Precision per J48:", j48scorePrec)
+                j48scoreF1 = metrics.f1_score(y_test, y_pred)
+                print("F1 score per J48:", j48scoreF1)
+                j48scoreRec = metrics.recall_score(y_test, y_pred)
+                print("Recall per J48:", j48scoreRec)
+                j48scoreRocAuc = metrics.roc_auc_score(y_test, y_pred)
+                print("ROC AUC per J48:", j48scoreRocAuc)
+                # fine metriche J48
 
-            # Predict the response for test dataset
-            y_pred = clf.predict(x_test)
-            score = clf.score(x_test, y_pred)
-            # Metriche per J48
-            j48score = metrics.accuracy_score(y_test, y_pred)
-            print("Accuracy per J$48:", j48score )
+                import matplotlib.pyplot as plt
 
+                from sklearn.metrics import confusion_matrix
+                import itertools
+                def plot_confusion_matrix(cm, classes,
+                                          normalize=False,
+                                          title='Confusion matrix',
+                                          cmap=plt.cm.Oranges):
+                    """
+                    This function prints and plots the confusion matrix.
+                    Normalization can be applied by setting `normalize=True`.
+                    Source: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
+                    """
 
+                    if normalize:
+                        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+                        print("Normalized confusion matrix")
+                    else:
+                        print('Confusion matrix, without normalization')
 
-            ###Metriche###
-            # Training predictions (to demonstrate overfitting)
-            train_rf_predictions = clf.predict(x_train)
-            train_rf_probs = clf.predict_proba(x_train)[:, 1]
+                    print(cm)
 
-            # Testing predictions (to determine performance)
-            rf_predictions = clf.predict(x_test)
-            rf_probs = clf.predict_proba(x_test)[:, 1]
+                    # Plot the confusion matrix
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+                    plt.title(title, size=24)
+                    plt.colorbar(aspect=4)
+                    tick_marks = np.arange(len(classes))
+                    plt.xticks(tick_marks, classes, rotation=45, size=14)
+                    plt.yticks(tick_marks, classes, size=14)
 
-            from sklearn.metrics import precision_score, recall_score, roc_auc_score, roc_curve
-            import matplotlib.pyplot as plt
+                    fmt = '.2f' if normalize else 'd'
+                    thresh = cm.max() / 2.
 
-            # Plot formatting
-            plt.style.use('fivethirtyeight')
-            plt.rcParams['font.size'] = 18
+                    # Labeling the plot
+                    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+                        plt.text(j, i, format(cm[i, j], fmt), fontsize=20,
+                                 horizontalalignment="center",
+                                 color="white" if cm[i, j] > thresh else "black")
 
-            def evaluate_model(predictions, probs, train_predictions, train_probs):
-                """Compare machine learning model to baseline performance.
-                Computes statistics and shows ROC curve."""
+                    plt.grid(None)
+                    plt.tight_layout()
+                    plt.ylabel('True label', size=18)
+                    plt.xlabel('Predicted label', size=18)
 
-                baseline = {}
+                # Confusion matrix
+                cm = confusion_matrix(y_test, y_pred)
+                plot_confusion_matrix(cm, classes=['Tumorale (1)', 'Non Tumorale(0)'],
+                                      title='Health Confusion Matrix')
+                pp = cm_dir + '/cm_J48_' + tipoCell + '_' + str(s) + '_' + str(ov) + '.png'
+                print("path per salvare immagini cm ", pp)
+                plt.savefig(pp)
 
-                baseline['recall'] = recall_score(y_test,
-                                                  [1 for _ in range(len(y_test))])
-                baseline['precision'] = precision_score(y_test,
-                                                        [1 for _ in range(len(y_test))])
-                baseline['roc'] = 0.5
+                # modello random forest feature  = x labels =y
+                # Import the model we are using
+                from sklearn.ensemble import RandomForestClassifier  # Instantiate model with 1000 decision trees
+                rf = RandomForestClassifier(max_depth=1000, n_estimators=1000)  # Train the model on training data
+                rf.fit(x_train, y_train)
+                # Use the forest's predict method on the test data
+                predictions = rf.predict(x_test)  # Calculate the absolute errors
+                # Calculate and display accuracy
+                # Calculate mean absolute percentage error (MAPE)
+                # Calculate the absolute errors
+                # metrics Rf
+                rfscoreAcc = metrics.accuracy_score(y_test, predictions)
+                print("Accuracy per RF:", rfscoreAcc)
+                rfscorePrec = metrics.precision_score(y_test, predictions)
+                print("Precision per RF:", rfscorePrec)
+                rfscoreF1 = metrics.f1_score(y_test, predictions)
+                print("F1 score per RF:", rfscoreF1)
+                rfscoreRec = metrics.recall_score(y_test, predictions)
+                print("Recall per RF:", rfscoreRec)
+                rfscoreRocAuc = metrics.roc_auc_score(y_test, predictions)
+                print("ROC AUC per RF:", rfscoreRocAuc)
+                # fine metriche J48
+                # confusion matrix RF
+                from sklearn.metrics import confusion_matrix
+                import itertools
+                def plot_confusion_matrix(cm, classes,
+                                          normalize=False,
+                                          title='Confusion matrix',
+                                          cmap=plt.cm.Oranges):
+                    """
+                    This function prints and plots the confusion matrix.
+                    Normalization can be applied by setting `normalize=True`.
+                    Source: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
+                    """
 
-                results = {}
+                    if normalize:
+                        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+                        print("Normalized confusion matrix")
+                    else:
+                        print('Confusion matrix, without normalization')
 
-                results['recall'] = recall_score(y_test, predictions)
-                results['precision'] = precision_score(y_test, predictions)
-                results['roc'] = roc_auc_score(y_test, probs)
+                    print(cm)
 
-                train_results = {}
-                train_results['recall'] = recall_score(y_train, train_predictions)
-                train_results['precision'] = precision_score(y_train, train_predictions)
-                train_results['roc'] = roc_auc_score(y_train, train_probs)
+                    # Plot the confusion matrix
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+                    plt.title(title, size=24)
+                    plt.colorbar(aspect=4)
+                    tick_marks = np.arange(len(classes))
+                    plt.xticks(tick_marks, classes, rotation=45, size=14)
+                    plt.yticks(tick_marks, classes, size=14)
 
-                for metric in ['recall', 'precision', 'roc']:
-                    print(
-                        f'{metric.capitalize()} Baseline: {round(baseline[metric], 2)} Test: {round(results[metric], 2)} Train: {round(train_results[metric], 2)}')
+                    fmt = '.2f' if normalize else 'd'
+                    thresh = cm.max() / 2.
 
-                # Calculate false positive rates and true positive rates
-                base_fpr, base_tpr, _ = roc_curve(y_test, [1 for _ in range(len(y_test))])
-                model_fpr, model_tpr, _ = roc_curve(y_test, probs)
+                    # Labeling the plot
+                    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+                        plt.text(j, i, format(cm[i, j], fmt), fontsize=20,
+                                 horizontalalignment="center",
+                                 color="white" if cm[i, j] > thresh else "black")
 
-                #plt.figure(figsize=(8, 6))
-                #plt.rcParams['font.size'] = 16
+                    plt.grid(None)
+                    plt.tight_layout()
+                    plt.ylabel('True label', size=18)
+                    plt.xlabel('Predicted label', size=18)
 
-                # Plot both curves
-                #plt.plot(base_fpr, base_tpr, 'b', label='baseline')
-                #plt.plot(model_fpr, model_tpr, 'r', label='model')
-                #plt.legend()
-                #plt.xlabel('False Positive Rate')
-                #plt.ylabel('True Positive Rate')
-                #plt.title('ROC Curves')
-                #plt.show()
-
-            evaluate_model(rf_predictions, rf_probs, train_rf_predictions, train_rf_probs)
-            plt.savefig('roc_auc_curve.png')
-            plt.style.use('fivethirtyeight')
-            plt.rcParams['font.size'] = 18
-            from sklearn.metrics import confusion_matrix
-            import itertools
-            def plot_confusion_matrix(cm, classes,
-                                      normalize=False,
-                                      title='Confusion matrix',
-                                      cmap=plt.cm.Oranges):
-                """
-                This function prints and plots the confusion matrix.
-                Normalization can be applied by setting `normalize=True`.
-                Source: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
-                """
-
-                if normalize:
-                    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-                    print("Normalized confusion matrix")
-                else:
-                    print('Confusion matrix, without normalization')
-
-                print(cm)
-
-                # Plot the confusion matrix
-                plt.figure(figsize=(10, 10))
-                plt.imshow(cm, interpolation='nearest', cmap=cmap)
-                plt.title(title, size=24)
-                plt.colorbar(aspect=4)
-                tick_marks = np.arange(len(classes))
-                plt.xticks(tick_marks, classes, rotation=45, size=14)
-                plt.yticks(tick_marks, classes, size=14)
-
-                fmt = '.2f' if normalize else 'd'
-                thresh = cm.max() / 2.
-
-                # Labeling the plot
-                for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-                    plt.text(j, i, format(cm[i, j], fmt), fontsize=20,
-                             horizontalalignment="center",
-                             color="white" if cm[i, j] > thresh else "black")
-
-                plt.grid(None)
-                plt.tight_layout()
-                plt.ylabel('True label', size=18)
-                plt.xlabel('Predicted label', size=18)
-
-            # Confusion matrix
-            cm = confusion_matrix(y_test, y_pred)
-            plot_confusion_matrix(cm, classes=['Tumorale (1)', 'Non Tumorale(0)'],
-                                  title='Health Confusion Matrix')
-            plt.savefig('cm.png')
-
-            #modello random forest feature  = x labels =y
-            # Import the model we are using
-            from sklearn.ensemble import RandomForestClassifier  # Instantiate model with 1000 decision trees
-            rf = RandomForestClassifier(max_depth=1000 ,n_estimators= 1000)  # Train the model on training data
-            rf.fit(x_train, y_train)
-            # Use the forest's predict method on the test data
-            predictions = rf.predict(x_test)  # Calculate the absolute errors
-            # Calculate and display accuracy
-            # Calculate mean absolute percentage error (MAPE)
-            # Calculate the absolute errors
-            rforestscore = metrics.accuracy_score(y_test, predictions)
-            print("Accuracy per RandomForest:", rforestscore)
-            with open('misurazioni_' + tipoCell + '.csv', 'a', newline='') as csv_file:
-                writer = csv.writer(csv_file, delimiter=';')
-                nome = tipoCell + '_size_' + str(s) + '_overlap_' + str(ov)
-                writer.writerow([nome, 'J48', j48score])
-                writer.writerow([nome, 'RandomForest', rforestscore])
-
+                # Confusion matrix
+                cm = confusion_matrix(y_test, predictions)
+                plot_confusion_matrix(cm, classes=['Tumorale (1)', 'Non Tumorale(0)'],
+                                      title='Health Confusion Matrix')
+                pp = cm_dir + '/cm_RF_' + tipoCell + '_' + str(s) + '_' + str(ov) + '.png'
+                print("path per salvare immagini cm ", pp)
+                plt.savefig(pp)
+                # fine
+                with open('misurazioni_' + tipoCell + '.csv', 'a', newline='') as csv_file:
+                    writer = csv.writer(csv_file, delimiter=';')
+                    nome = tipoCell + '_size_' + str(s) + '_overlap_' + str(ov)
+                    writer.writerow([nome, 'J48', j48scoreAcc, j48scorePrec, j48scoreF1, j48scoreRec, j48scoreRocAuc])
+                    writer.writerow(
+                        [nome, 'RandomForest', rfscoreAcc, rfscorePrec, rfscoreF1, rfscoreRec, rfscoreRocAuc])
 if __name__ == '__main__':
     main()

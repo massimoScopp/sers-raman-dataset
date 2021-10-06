@@ -18,7 +18,7 @@ import pandas as pd
 #strnome specifica il nome del dataset e del .pickle
 strnome ='nucleus'
 path_dataset = './dataset_raman_original_csv_'+strnome
-csv_groupF_dir = "./dataset_raman_interval_freqMax_"+strnome
+csv_groupF_dir = "./dataset_raman_interval_freq_"+strnome
 
 
 
@@ -117,8 +117,8 @@ def create_unsegmented_dataset():
 
                         arr_appoggio = samples[i-2:i]
 
-                        #per massimo
-                        #valore_da_inserire = max(arr_appoggio)
+                        # #per massimo
+                        # valore_da_inserire = max(arr_appoggio)
                         #per media
                         valore_da_inserire = statistics.mean(arr_appoggio)
                         newsamples.append(valore_da_inserire)
